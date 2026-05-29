@@ -1,0 +1,25 @@
+{
+  "name": "x402-risk-research-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "demo": "tsx src/cli.ts",
+    "demo:sample": "DRY_RUN=true tsx src/cli.ts --chain base --target 0x4200000000000000000000000000000000000006 --budget 0.05",
+    "diagnose": "tsx src/diagnose.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.29",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
