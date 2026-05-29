@@ -67,14 +67,14 @@ function paidDigest(result: AgentResult): string {
   const socialCount = result.enrichment.socialFindings.length;
 
   if (dryRunCount > 0) {
-    return `${dryRunCount} paid call${dryRunCount === 1 ? "" : "s"} simulated; ${webCount} web signal${webCount === 1 ? "" : "s"} and ${socialCount} social signal${socialCount === 1 ? "" : "s"} summarized.`;
+    return `${plural(dryRunCount, "paid call")} simulated; ${signalSummary(webCount, socialCount)} summarized.`;
   }
 
   if (paidCount === 0 && failedCount === 0) {
     return "No paid calls were needed.";
   }
 
-  return `${paidCount} paid call${paidCount === 1 ? "" : "s"} completed; ${webCount} web signal${webCount === 1 ? "" : "s"} and ${socialCount} social signal${socialCount === 1 ? "" : "s"} summarized.`;
+  return `${plural(paidCount, "paid call")} completed; ${signalSummary(webCount, socialCount)} summarized.`;
 }
 
 function formatList(title: string, items: string[], limit: number): string[] {
@@ -121,6 +121,14 @@ function fallbackError(receipt: Record<string, unknown>): string | undefined {
 
 function formatUsd(value: number | undefined): string {
   return value === undefined ? "unavailable" : `$${Math.round(value).toLocaleString("en-US")}`;
+}
+
+function signalSummary(webCount: number, socialCount: number): string {
+  return `${plural(webCount, "web signal")} and ${plural(socialCount, "social signal")}`;
+}
+
+function plural(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? "" : "s"}`;
 }
 
 function formatHours(hours: number): string {

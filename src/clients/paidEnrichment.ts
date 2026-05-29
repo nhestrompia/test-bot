@@ -1,9 +1,7 @@
 import { PaymentClient, decidePaidCalls } from "./payment.js";
-import type { FreeMarketSummary, PaidCallPlan, PaidEnrichment, RiskScore } from "../types.js";
+import type { PaidCallPlan, PaidEnrichment, RiskScore } from "../types.js";
 
 type EnrichmentInput = {
-  target: string;
-  free: FreeMarketSummary;
   risk: RiskScore;
   plans: PaidCallPlan[];
   budgetUsd: number;
@@ -29,8 +27,8 @@ export async function fetchPaidEnrichment(input: EnrichmentInput): Promise<PaidE
   }
 
   const preflightSkips = decidePaidCalls(input.plans, input.budgetUsd);
-  const skippedUrls = new Set(preflightSkips.map((trace) => trace.url));
-  const payablePlans = input.plans.filter((plan) => !skippedUrls.has(plan.url));
+  const skippedUrls = new Set(preflightSkips.map(({ url }) => url));
+  const payablePlans = input.plans.filter(({ url }) => !skippedUrls.has(url));
   const paymentClient = new PaymentClient(input.dryRun);
   const paidResults = await Promise.all(payablePlans.map((plan) => paymentClient.paidFetch(plan)));
 
@@ -52,19 +50,19 @@ function extractWebFindings(data: unknown): string[] {
   }
 
   const results = Array.isArray(data.results) ? data.results : [];
-  return results
-    .map((item) => {
-      if (!isRecord(item)) {
-        return undefined;
-      }
-      const title = typeof item.title === "string" ? item.title : "Untitled result";
-      const url = typeof item.url === "string" ? item.url : "";
-      const highlight = Array.isArray(item.highlights) && typeof item.highlights[0] === "string" ? cleanText(item.highlights[0], 220) : undefined;
-      const text = typeof item.text === "string" ? cleanText(item.text, 220) : undefined;
-      return [title, url, highlight ?? text].filter(Boolean).join(" - ");
-    })
-    .filter(Boolean)
-    .slice(0, 3) as string[];
+  return results.map(formatWebFinding).filter(isString).slice(0, 3);
+}
+
+function formatWebFinding(item: unknown): string | undefined {
+  if (!isRecord(item)) {
+    return undefined;
+  }
+
+  const title = typeof item.title === "string" ? item.title : "Untitled result";
+  const url = typeof item.url === "string" ? item.url : "";
+  const highlight = Array.isArray(item.highlights) && typeof item.highlights[0] === "string" ? cleanText(item.highlights[0], 220) : undefined;
+  const text = typeof item.text === "string" ? cleanText(item.text, 220) : undefined;
+  return [title, url, highlight ?? text].filter(Boolean).join(" - ");
 }
 
 function extractTokenSafetyFinding(data: Record<string, unknown>): string | undefined {
@@ -106,22 +104,23 @@ function extractSocialFindings(data: unknown): string[] {
   }
 
   const tweets = Array.isArray(data.tweets) ? data.tweets : Array.isArray(data.data) ? data.data : [];
-  return tweets
-    .map((item) => {
-      if (!isRecord(item)) {
-        return undefined;
-      }
-      const text = typeof item.text === "string" ? item.text : typeof item.full_text === "string" ? item.full_text : undefined;
-      const id = typeof item.id === "string" ? item.id : undefined;
-      const url = typeof item.url === "string" ? item.url : id ? `https://x.com/i/web/status/${id}` : undefined;
-      const metrics = isRecord(item.public_metrics) ? item.public_metrics : undefined;
-      const likes = numberField(metrics, "like_count");
-      const replies = numberField(metrics, "reply_count");
-      const metricText = [likes !== undefined ? `${likes} likes` : undefined, replies !== undefined ? `${replies} replies` : undefined].filter(Boolean).join(", ");
-      return [cleanText(text, 180), metricText || undefined, url].filter(Boolean).join(" - ");
-    })
-    .filter(Boolean)
-    .slice(0, 3) as string[];
+  return tweets.map(formatSocialFinding).filter(isString).slice(0, 3);
+}
+
+function formatSocialFinding(item: unknown): string | undefined {
+  if (!isRecord(item)) {
+    return undefined;
+  }
+
+  const text = typeof item.text === "string" ? item.text : typeof item.full_text === "string" ? item.full_text : undefined;
+  const id = typeof item.id === "string" ? item.id : undefined;
+  const url = typeof item.url === "string" ? item.url : id ? `https://x.com/i/web/status/${id}` : undefined;
+  const metrics = isRecord(item.public_metrics) ? item.public_metrics : undefined;
+  const likes = numberField(metrics, "like_count");
+  const replies = numberField(metrics, "reply_count");
+  const metricText = [likes !== undefined ? `${likes} likes` : undefined, replies !== undefined ? `${replies} replies` : undefined].filter(Boolean).join(", ");
+  const parts = [cleanText(text, 180), metricText || undefined, url].filter(Boolean);
+  return parts.length > 0 ? parts.join(" - ") : undefined;
 }
 
 function cleanText(value: string | undefined, maxLength: number): string | undefined {
@@ -145,6 +144,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+function isString(value: string | undefined): value is string {
+  return value !== undefined;
+}
+
 function stringField(value: Record<string, unknown> | undefined, field: string): string | undefined {
   if (!value) {
     return undefined;
@@ -161,6 +164,10 @@ function numberField(value: Record<string, unknown> | undefined, field: string):
   return typeof value[field] === "number" ? value[field] : undefined;
 }
 
-function booleanField(value: Record<string, unknown>, field: string): boolean | undefined {
+function booleanField(value: Record<string, unknown> | undefined, field: string): boolean | undefined {
+  if (!value) {
+    return undefined;
+  }
+
   return typeof value[field] === "boolean" ? value[field] : undefined;
 }

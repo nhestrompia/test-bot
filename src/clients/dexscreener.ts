@@ -40,9 +40,7 @@ const searchSchema = z.object({ pairs: z.array(pairSchema).optional() }).passthr
 
 export async function fetchFreeMarketSummary(chain: SupportedChain, target: string): Promise<FreeMarketSummary> {
   const chainId = chainMap[chain];
-  const pairs = looksLikeAddress(target)
-    ? await fetchTokenPairs(chainId, target)
-    : await searchPairs(chainId, target);
+  const pairs = looksLikeAddress(target) ? await fetchTokenPairs(chainId, target) : await searchPairs(chainId, target);
 
   if (pairs.length === 0) {
     return {

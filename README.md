@@ -15,6 +15,8 @@ For a no-spend demo:
 DRY_RUN=true npm run demo -- --chain base --target 0x4200000000000000000000000000000000000006 --budget 0.05
 ```
 
+Use a token contract address for specific reports. Symbol/name queries are supported as best-effort DEX Screener searches, but short symbols like `eth` can be ambiguous and may produce broad paid-search context.
+
 For a real paid run, export a Floe **agent key** and leave `DRY_RUN` unset:
 
 ```bash

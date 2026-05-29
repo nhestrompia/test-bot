@@ -8,8 +8,6 @@ export async function runRiskResearch(options: CliOptions): Promise<AgentResult>
   const risk = scoreMarketRisk(free);
   const paidPlans = buildPaidPlans(options.target, free);
   const enrichment = await fetchPaidEnrichment({
-    target: options.target,
-    free,
     risk,
     plans: paidPlans,
     budgetUsd: options.budgetUsd,

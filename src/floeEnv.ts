@@ -4,7 +4,7 @@ export type FloeCredential = {
   agentName?: string;
 };
 
-const PRIMARY_ENV_NAMES = ["FLOE_KEY"] as const;
+const PRIMARY_ENV_NAMES = ["FLOE_KEY", "FLOE_API_KEY", "FLOE_FACILITATOR_API_KEY"] as const;
 const CREDIT_API_HOST_ENV_SUFFIX = "CREDIT_API_FLOELABS_XYZ";
 
 export function getFloeCredential(

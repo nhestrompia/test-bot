@@ -8,6 +8,8 @@ type PaidFetchResult = {
   trace: PaymentTrace;
 };
 
+type TracePatch = Pick<PaymentTrace, "status"> & Partial<Omit<PaymentTrace, "provider" | "label" | "url" | "method" | "status">>;
+
 type FloePreflight = {
   ok: boolean;
   costUsd?: number;
@@ -28,17 +30,12 @@ export class PaymentClient {
       const reason = this.dryRun ? "DRY_RUN=true" : "No Floe agent key env var was loaded";
       return {
         data: dryRunPayload(plan),
-        trace: {
-          provider: plan.provider,
-          label: plan.label,
-          url: plan.url,
-          method: plan.method,
-          estimatedCostUsd: plan.estimatedCostUsd,
+        trace: traceFor(plan, {
           actualCostUsd: 0,
           status: "dry-run",
           reason,
           receipt: { mode: "dry-run", estimatedCostUsd: plan.estimatedCostUsd },
-        },
+        }),
       };
     }
 
@@ -47,12 +44,7 @@ export class PaymentClient {
       const keyInfo = inspectFloeKey(this.apiKey);
       return {
         data: preflight.receipt ?? {},
-        trace: {
-          provider: plan.provider,
-          label: plan.label,
-          url: plan.url,
-          method: plan.method,
-          estimatedCostUsd: plan.estimatedCostUsd,
+        trace: traceFor(plan, {
           actualCostUsd: 0,
           status: "failed",
           reason: formatPreflightFailure(preflight.error, keyInfo.formatHint),
@@ -63,7 +55,7 @@ export class PaymentClient {
             key: keyInfo,
             ...(preflight.receipt ?? {}),
           },
-        },
+        }),
       };
     }
 
@@ -78,11 +70,7 @@ export class PaymentClient {
 
       return {
         data: payload.data,
-        trace: {
-          provider: plan.provider,
-          label: plan.label,
-          url: plan.url,
-          method: plan.method,
+        trace: traceFor(plan, {
           estimatedCostUsd,
           actualCostUsd: payload.cost ?? estimatedCostUsd,
           status: "paid",
@@ -91,17 +79,13 @@ export class PaymentClient {
             receipt_id: payload.receipt_id,
             proxy: isRecord(payload.raw) ? payload.raw : { payload: payload.raw },
           },
-        },
+        }),
       };
     } catch (error: unknown) {
       if (error instanceof FloeError) {
         return {
           data: error.payload,
-          trace: {
-            provider: plan.provider,
-            label: plan.label,
-            url: plan.url,
-            method: plan.method,
+          trace: traceFor(plan, {
             estimatedCostUsd,
             actualCostUsd: 0,
             status: "failed",
@@ -110,17 +94,14 @@ export class PaymentClient {
               preflight: preflight.receipt,
               proxy: isRecord(error.payload) ? error.payload : { payload: error.payload },
             },
-          },
+          }),
         };
       }
 
+      const payload = errorToPayload(error);
       return {
-        data: errorToPayload(error),
-        trace: {
-          provider: plan.provider,
-          label: plan.label,
-          url: plan.url,
-          method: plan.method,
+        data: payload,
+        trace: traceFor(plan, {
           estimatedCostUsd,
           actualCostUsd: 0,
           status: "failed",
@@ -128,9 +109,9 @@ export class PaymentClient {
           receipt: {
             backend: "floe",
             proxyUrl: this.proxyUrl,
-            ...errorToPayload(error),
+            ...payload,
           },
-        },
+        }),
       };
     }
   }
@@ -175,22 +156,29 @@ export function decidePaidCalls(plans: PaidCallPlan[], budgetUsd: number, alread
   return plans.flatMap((plan) => {
     if (committed + plan.estimatedCostUsd > budgetUsd) {
       return [
-        {
-          provider: plan.provider,
-          label: plan.label,
-          url: plan.url,
-          method: plan.method,
-          estimatedCostUsd: plan.estimatedCostUsd,
+        traceFor(plan, {
           actualCostUsd: 0,
           status: "skipped" as const,
           reason: `Estimated spend would exceed $${budgetUsd.toFixed(2)} budget`,
-        },
+        }),
       ];
     }
 
     committed += plan.estimatedCostUsd;
     return [];
   });
+}
+
+function traceFor(plan: PaidCallPlan, patch: TracePatch): PaymentTrace {
+  return {
+    provider: plan.provider,
+    label: plan.label,
+    url: plan.url,
+    method: plan.method,
+    estimatedCostUsd: plan.estimatedCostUsd,
+    actualCostUsd: 0,
+    ...patch,
+  };
 }
 
 async function readJson(response: Response): Promise<unknown> {
