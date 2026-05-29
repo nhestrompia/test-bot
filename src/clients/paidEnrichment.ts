@@ -1,31 +1,13 @@
 import { PaymentClient, decidePaidCalls } from "./payment.js";
-import type { PaidCallPlan, PaidEnrichment, RiskScore } from "../types.js";
+import type { PaidCallPlan, PaidEnrichment } from "../types.js";
 
 type EnrichmentInput = {
-  risk: RiskScore;
   plans: PaidCallPlan[];
   budgetUsd: number;
   dryRun: boolean;
 };
 
 export async function fetchPaidEnrichment(input: EnrichmentInput): Promise<PaidEnrichment> {
-  if (!input.risk.needsPaidEnrichment) {
-    return {
-      webFindings: [],
-      socialFindings: [],
-      traces: input.plans.map((plan) => ({
-        provider: plan.provider,
-        label: plan.label,
-        url: plan.url,
-        method: plan.method,
-        estimatedCostUsd: plan.estimatedCostUsd,
-        actualCostUsd: 0,
-        status: "skipped",
-        reason: "Free data confidence was high enough",
-      })),
-    };
-  }
-
   const preflightSkips = decidePaidCalls(input.plans, input.budgetUsd);
   const skippedUrls = new Set(preflightSkips.map(({ url }) => url));
   const payablePlans = input.plans.filter(({ url }) => !skippedUrls.has(url));

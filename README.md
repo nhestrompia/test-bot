@@ -1,6 +1,6 @@
 # Minimal x402 Risk Research Agent
 
-A small TypeScript CLI that checks free DEX Screener data first, then conditionally uses paid x402 enrichment through a Floe-compatible payment client. The output is designed for a short Loom: target, free checks, spend decision, paid enrichment, risk brief, and payment trace.
+A small TypeScript CLI that checks free DEX Screener data first, then uses paid x402 enrichment through a Floe-compatible payment client when the requested budget allows it. The output is designed for a short Loom: target, free checks, spend decision, paid enrichment, risk brief, and payment trace.
 
 ## Setup
 
@@ -58,7 +58,7 @@ npm run diagnose -- --agent research
 1. Resolves the target as a token address or search phrase.
 2. Pulls free DEX Screener token/pair data.
 3. Scores basic market risk from liquidity, volume, pool age, pair count, and price action.
-4. If confidence is low, preflights paid enrichments against the budget: Exa web search, x402.twit.sh X/Twitter search, and OnchainExpat token metadata when a nonzero EVM token address is available.
+4. Preflights paid enrichments against the budget by default: Exa web search, x402.twit.sh X/Twitter search, and OnchainExpat token metadata when a nonzero EVM token address is available.
 5. In `DRY_RUN=true`, returns deterministic mock enrichment and trace rows.
 6. In real mode, uses the local Floe SDK-style client in `src/clients/floe.ts`, which POSTs through Floe's documented `https://credit-api.floelabs.xyz/v1/proxy/fetch` using `FLOE_KEY`.
 

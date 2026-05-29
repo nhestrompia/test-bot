@@ -71,7 +71,7 @@ export function scoreMarketRisk(summary: FreeMarketSummary): RiskScore {
     confidence: clamp(Number(confidence.toFixed(2)), 0, 0.95),
     warnings,
     positives,
-    needsPaidEnrichment: confidence < 0.75 || boundedScore >= 55 || warnings.length >= 2,
+    needsPaidEnrichment: true,
   };
 }
 

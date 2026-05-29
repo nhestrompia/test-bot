@@ -23,7 +23,7 @@ describe("scoreMarketRisk", () => {
   it("scores old liquid markets as lower risk", () => {
     const result = scoreMarketRisk(baseSummary);
     expect(result.level).toBe("low");
-    expect(result.needsPaidEnrichment).toBe(false);
+    expect(result.needsPaidEnrichment).toBe(true);
   });
 
   it("scores low-liquidity fresh markets as high risk", () => {
